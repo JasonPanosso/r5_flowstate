@@ -55,6 +55,8 @@ global bool isBrightWaterByZer0 = false
 global const float KILLLEADER_STREAK_ANNOUNCE_TIME = 5
 table playersInfo
 
+global table<string,LocPair> savedlocations
+
 //solo mode
 global function CheckForObservedTarget
 enum eTDMState
@@ -171,6 +173,8 @@ void function _CustomTDM_Init()
 		AddClientCommandCallback("ungod", ClientCommand_UnGod)
 		AddClientCommandCallback("next_round", ClientCommand_NextRound)
 		AddClientCommandCallback("tgive", ClientCommand_GiveWeapon)
+		AddClientCommandCallback("save_location", ClientCommand_SaveLocation)
+		AddClientCommandCallback("load_location", ClientCommand_LoadLocation)
 	}
 
 	AddClientCommandCallback("latency", ClientCommand_ShowLatency)
@@ -3153,9 +3157,11 @@ string function helpMessage()
 	"1. 'kill_self': if you get stuck.\n" +
 	"2. 'scoreboard': displays scoreboard to user.\n" +
 	"3. 'latency': displays ping of all players to user.\n" +
-	"5. 'spectate': spectate enemies!\n" +
-	"6. 'controllersummary': see how many controller players are connected.\n" +
-	"7. 'commands': display this message again"
+	"4. 'spectate': spectate enemies!\n" +
+	"5. 'controllersummary': see how many controller players are connected.\n" +
+	"6. 'save_location': save your current location.\n" +
+	"7. 'load_location': load last saved location.\n" +
+	"8. 'commands': display this message again"
 }
 
 bool function ClientCommand_Help(entity player, array<string> args)
@@ -3672,3 +3678,37 @@ void function highlightKdMoreThan2(entity player)
 		Highlight_ClearEnemyHighlight( player )
 	}
 }
+
+bool function ClientCommand_SaveLocation(entity player, array<string> args)
+{	
+	if(!IsValid(player)) return false
+	if (is1v1EnabledAndAllowed()) {
+		Message(player, "An error has occured", "This command is disabled for 1v1 servers.", 10)
+		return false
+	}
+	savedlocations[player.GetPlayerName()] <- NewLocPair(player.GetOrigin(), player.GetAngles())
+	return true
+}
+bool function ClientCommand_LoadLocation(entity player, array<string> args)
+{	
+	if(!IsValid(player)) return false
+	if(is1v1EnabledAndAllowed())
+	{
+		Message(player, "An error has occured", "This command is disabled for 1v1 servers.", 10)
+		return false
+	} 
+	else if(player.GetPlayerName() in savedlocations) 
+	{
+		LocPair locPair = savedlocations[player.GetPlayerName()]
+		player.SetOrigin(locPair.origin)
+		player.SetAngles(locPair.angles)
+		return true
+	}
+	else
+	{
+		Message(player, "An error has occured", "A location must be saved in order to load.", 10)
+		return false
+	}
+	unreachable
+}
+
